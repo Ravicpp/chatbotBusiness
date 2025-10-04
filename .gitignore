@@ -1,0 +1,12 @@
+/node_modules
+/chatbot-frontend/node_modules
+/chatbot-backend/node_modules
+/.env
+/chatbot-frontend/.env.local
+/dist
+/build
+
+# optional extra safety
+.env*
+chatbot-frontend/.env*
+chatbot-backend/.env*

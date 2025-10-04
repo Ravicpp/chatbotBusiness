@@ -1,0 +1,156 @@
+/* Admin.module.css
+   Final updated version — scoped to .adminDashboard only.
+   Changes in this file:
+   - Increased hard-delete icon size and emphasis using attribute selector (no JSX changes needed)
+   - Fixed pagination button overflow: ensured buttons keep text inside, set min-width and nowrap
+   - General responsive, clean, accessible styles for admin dashboard only
+   Save as: src/components/Admin/Admin.module.css
+*/
+
+.adminDashboard{
+  --page-bg: #f5f7fb;
+  --card-bg: #ffffff;
+  --muted: #6b7280;
+  --text: #0f1724;
+  --accent: #0ea5a4;      /* teal */
+  --accent-2: #2563eb;    /* blue */
+  --danger: #ef4444;
+  --surface-border: #e6e9ef;
+  --shadow-sm: 0 6px 18px rgba(16,24,40,0.06);
+  --radius: 10px;
+
+  box-sizing: border-box;
+  width: 100%;
+  padding: 18px;
+  margin: 12px auto;
+  max-width: 1280px;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: var(--text);
+  background: transparent; /* wrapper only */
+}
+
+/* Header */
+.adminHeader{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  border-radius: calc(var(--radius) - 2px);
+  background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(255,255,255,0.92));
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 14px;
+}
+.headerInfo h1{ margin: 0; font-size: 16px; font-weight: 700; color: var(--text); }
+.headerInfo p{ margin: 6px 0 0 0; color: var(--muted); font-size: 13px; }
+.headerActions{ display:flex; gap:8px; align-items:center; }
+
+/* Buttons */
+.refreshBtn, .logoutBtn {
+  display:inline-flex; align-items:center; gap:8px;
+  border: 1px solid var(--surface-border);
+  padding: 8px 10px; border-radius: 8px; cursor: pointer;
+  background: var(--card-bg); color: var(--text); font-weight: 600; box-shadow: none;
+}
+.refreshBtn[disabled], .logoutBtn[disabled]{ opacity: 0.55; cursor: not-allowed; }
+.spin{ animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Controls / Filters */
+.adminControls{ display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; margin-bottom: 14px; }
+.filterGroup{ display:flex; flex-direction:column; gap:6px; }
+.filterGroup label{ font-size:12px; color:var(--muted); }
+.selectControl, .inputControl { height:40px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--surface-border); background: var(--card-bg); color: var(--text); font-size: 14px; outline: none; }
+.phoneFilterInput{ display:flex; gap:8px; align-items:center; }
+.searchBtn, .clearBtn { height:40px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--surface-border); background: var(--card-bg); cursor: pointer; }
+.searchBtn[disabled], .clearBtn[disabled]{ opacity:0.6; }
+
+/* Table wrapper */
+.tableWrapper{ width:100%; border-radius: 10px; background: transparent; overflow: auto; padding: 6px; }
+
+/* Desktop table layout */
+.orderTable{ width:100%; border-collapse: collapse; min-width: 920px; background: transparent; }
+.orderTable thead th{ text-align:left; font-size:13px; color: var(--muted); padding: 12px 14px; position: sticky; top: 0; background: rgba(255,255,255,0.98); border-bottom: 1px solid var(--surface-border); z-index: 2; }
+.orderTable tbody td{ padding: 12px 14px; vertical-align: top; border-bottom: 1px solid rgba(230,233,239,0.6); font-size: 14px; color: var(--text); }
+.orderTable tr:hover td{ background: rgba(14,165,136,0.03); }
+
+/* Helper elements inside cells */
+.userInfo strong{ display:block; font-size:15px; line-height:1.1; }
+.phoneLink a{ color: var(--accent-2); text-decoration:none; font-size:13px; }
+.badgeOrder, .badgeAppointment { display:inline-block; padding:6px 10px; border-radius:999px; font-size:12px; font-weight:700; background: rgba(37,99,235,0.06); color: var(--accent-2); }
+.badgeOrder { background: rgba(6,182,212,0.06); color: var(--accent); }
+
+/* Status badge & variants */
+.statusBadge{ padding: 6px 10px; border-radius: 999px; font-weight:700; font-size:13px; display:inline-flex; align-items:center; gap:8px; }
+.pending{ color: #a16207; }
+.confirmed{ color: #065f46; }
+.shipped{ color: #1f2937; }
+.delivered{ color: #065f46; }
+.canceled{ color: var(--danger); }
+
+/* Controls inside rows */
+.statusSelect { height:36px; padding: 6px 8px; border-radius:8px; border:1px solid var(--surface-border); background:#fff; }
+.feedbackInput { min-height:44px; padding:8px 10px; border-radius:8px; border:1px solid var(--surface-border); resize:vertical; width:100%; background:#fff; }
+
+/* action icons */
+.iconBtn{ height:36px; width:36px; display:inline-flex; align-items:center; justify-content:center; border-radius:8px; border:1px solid var(--surface-border); background:#fff; cursor:pointer; }
+.iconBtn:hover{ transform: translateY(-2px); }
+
+/* Increase size & visibility for hard-delete specifically (no JSX change) */
+button[title="Hard Delete (permanent)"]{ height:44px; width:44px; border-radius:10px; border:1px solid rgba(239,68,68,0.12); background: rgba(239,68,68,0.04); }
+button[title="Hard Delete (permanent)"] svg{ width:20px !important; height:20px !important; color: var(--danger); }
+button[title="Hard Delete (permanent)"]:hover{ background: rgba(239,68,68,0.08); transform: translateY(-3px); }
+
+/* make restore button slightly more visible too */
+button[title="Restore order"]{ border-radius:8px; }
+
+/* no-data and loading */
+.noData{ text-align:center; padding:28px 0; color:var(--muted); }
+.loadingState{ display:flex; gap:10px; align-items:center; justify-content:center; padding:28px 0; color:var(--muted); }
+
+/* Pagination */
+.pagination{ display:flex; gap:10px; align-items:center; justify-content:center; margin-top:14px; flex-wrap:wrap; }
+.pagination button{
+  height:38px; padding: 8px 12px; border-radius:8px; border:1px solid var(--surface-border); background:#fff; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px; white-space:nowrap; min-width:88px;
+}
+.pageInfo{ color:var(--muted); font-size:13px; }
+
+/* Two-column layout for desktop: sidebar + content */
+.gridContainer{ display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items:start; }
+.sidebar{ position: sticky; top: 18px; padding: 12px; border-radius: 10px; background: var(--card-bg); border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm); }
+.detailCard{ padding:10px; border-radius:8px; background: transparent; }
+.selectedRow{ box-shadow: 0 6px 20px rgba(37,99,235,0.06); background: linear-gradient(90deg, rgba(37,99,235,0.02), rgba(255,255,255,0.02)); }
+
+/* MOBILE / TABLET: stack, compact, card-style rows */
+@media (max-width: 900px) {
+  .gridContainer{ grid-template-columns: 1fr; }
+  .sidebar{ position: relative; top: auto; margin-bottom:10px; }
+
+  .orderTable{ min-width: 100%; display:block; }
+  .orderTable thead{ display:none; }
+  .orderTable tbody{ display:block; }
+  .orderTable tbody tr{
+    display:block; background: var(--card-bg); border-radius: 10px; padding: 10px; margin-bottom: 12px; border: 1px solid var(--surface-border); box-shadow: var(--shadow-sm);
+  }
+  .orderTable tbody td{ display:flex; justify-content:space-between; padding:8px 10px; border-bottom: none; align-items:flex-start; }
+  .orderTable tbody td:before{ content: attr(data-label) ":"; font-weight:700; color:var(--muted); margin-right:12px; min-width:110px; font-size:13px; }
+
+  /* make controls & inputs full width in mobile rows */
+  .statusSelect, .feedbackInput { width:100%; margin-top:6px; }
+}
+
+/* very small screens */
+@media (max-width: 420px) {
+  .selectControl, .inputControl { height:38px; font-size:13px; }
+  .headerInfo h1{ font-size:15px; }
+  .orderTable tbody td:before { min-width:90px; font-size:12px; }
+  .pagination button{ min-width:72px; padding:6px 8px; }
+}
+
+/* focus / keyboard accessibility */
+select:focus, input:focus, textarea:focus, button:focus { outline: 3px solid rgba(37,99,235,0.12); outline-offset: 2px; }
+
+/* End of Admin.module.css */

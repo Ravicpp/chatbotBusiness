@@ -160,7 +160,7 @@ export default function ChatBot() {
   const handleCancelOrder = async () => {
     setLoading(true);
     try {
-      const res = await API.delete(`/api/orders/${cancelConfirm.id}`);
+      const res = await API.delete(`/orders/${cancelConfirm.id}`);
       pushBot(res.data?.message || "✅ Order cancelled successfully!", {
         type: "success",
         instant: true,
@@ -182,7 +182,7 @@ export default function ChatBot() {
   const handleCancelAppointment = async () => {
     setLoading(true);
     try {
-      const res = await API.delete(`/api/appointments/${cancelConfirm.id}`);
+      const res = await API.delete(`/appointments/${cancelConfirm.id}`);
       pushBot(res.data?.message || "✅ Appointment cancelled successfully!", {
         type: "success",
         instant: true,
@@ -976,7 +976,7 @@ export default function ChatBot() {
       pushBot(t(language, "creatingProfile"), { type: "info", instant: true });
       try {
         // NOTE: your backend supports returning a token on register (userController.registerUser)
-        const res = await API.post("/api/users/register", {
+        const res = await API.post("/users/register", {
           name,
           phone,
           email: text,
@@ -1075,7 +1075,7 @@ export default function ChatBot() {
     setLoading(true);
     try {
       // call auth login - backend route: POST /api/users/login
-      const res = await API.post("/api/users/login", {
+      const res = await API.post("/users/login", {
         phone: loginPhone.trim(),
       });
 
@@ -1198,7 +1198,7 @@ export default function ChatBot() {
         notes,
       };
 
-      const res = await API.post("/api/orders", payload);
+      const res = await API.post("/orders", payload);
       pushBot(res.data?.reply || t(language, "placeOrderSuccess"), {
         type: "order",
         instant: true,
@@ -1266,7 +1266,7 @@ export default function ChatBot() {
     try {
       const payload = { ...apptDraft };
 
-      const res = await API.post("/api/appointments", payload);
+      const res = await API.post("/appointments", payload);
       pushBot(res.data?.reply || t(language, "appointmentSuccess"), {
         type: "appointment",
         instant: true,
@@ -1327,7 +1327,7 @@ export default function ChatBot() {
         orderId: pendingFeedback.orderId,
         feedback: feedbackText.trim(),
       };
-      const res = await API.post("/api/users/feedback", payload);
+      const res = await API.post("/users/feedback", payload);
       pushBot(res.data?.message || "✅ Feedback submitted successfully!", {
         type: "success",
         instant: true,
@@ -1356,7 +1356,7 @@ export default function ChatBot() {
       });
     setLoading(true);
     try {
-      const res = await API.post("/api/users/register", {
+      const res = await API.post("/users/register", {
         name,
         phone,
         email,
@@ -1429,9 +1429,9 @@ export default function ChatBot() {
       const token = localStorage.getItem("rm_token");
       let res;
       if (token) {
-        res = await API.get("/api/users/orders");
+        res = await API.get("/users/orders");
       } else {
-        res = await API.get(`/api/users/${phone}/orders`);
+        res = await API.get(`/users/${phone}/orders`);
       }
 
       const allOrders = res.data?.orders || [];
@@ -1495,9 +1495,9 @@ export default function ChatBot() {
       const token = localStorage.getItem("rm_token");
       let res;
       if (token) {
-        res = await API.get("/api/users/orders");
+        res = await API.get("/users/orders");
       } else {
-        res = await API.get(`/api/users/${phone}/orders`);
+        res = await API.get(`/users/${phone}/orders`);
       }
 
       const allOrders = res.data?.orders || [];

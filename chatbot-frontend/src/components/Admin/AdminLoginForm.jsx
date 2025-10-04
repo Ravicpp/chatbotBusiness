@@ -72,7 +72,7 @@ export default function AdminLoginForm({ onLoginSuccess, onCancel }) {
 
     setLoading(true);
     try {
-      const res = await API.post('/api/admin/login', { username, password });
+      const res = await API.post('/admin/login', { username, password });
       
       const token = extractAndSanitizeToken(res?.data);
 

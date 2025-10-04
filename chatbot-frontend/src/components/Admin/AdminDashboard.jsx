@@ -80,7 +80,7 @@ export default function AdminDashboard({ onLogout }) {
       });
 
       const token = localStorage.getItem("adminToken");
-      const res = await API.get(`/api/admin/orders?${params}`, {
+      const res = await API.get(`/admin/orders?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -149,7 +149,7 @@ export default function AdminDashboard({ onLogout }) {
         );
 
         // If status was updated, refresh the list to ensure consistency
-        if (endpoint === "/api/admin/order-status") {
+        if (endpoint === "/admin/order-status") {
           fetchOrders();
         }
       } catch (err) {
@@ -177,7 +177,7 @@ export default function AdminDashboard({ onLogout }) {
       userId,
       orderId,
       { status },
-      "/api/admin/order-status",
+      "/admin/order-status",
       "Failed to update status."
     );
   };
@@ -187,7 +187,7 @@ export default function AdminDashboard({ onLogout }) {
       userId,
       orderId,
       { feedback },
-      "/api/admin/order-feedback",
+      "/admin/order-feedback",
       "Failed to update feedback."
     );
   };
@@ -203,7 +203,7 @@ export default function AdminDashboard({ onLogout }) {
     if (!token) return alert("Admin token missing. Please login again.");
 
     try {
-      await API.delete(`/api/admin/orders/${userId}/${orderId}`, {
+      await API.delete(`/admin/orders/${userId}/${orderId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       // reload list
@@ -223,7 +223,7 @@ export default function AdminDashboard({ onLogout }) {
     if (!token) return alert("Admin token missing. Please login again.");
 
     try {
-      await API.post(`/api/admin/orders/${userId}/${orderId}/restore`, null, {
+      await API.post(`/admin/orders/${userId}/${orderId}/restore`, null, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchOrders();

@@ -18,5 +18,6 @@ const API = axios.create({
 // Example usage per request:
 // API.get('/orders', { headers: { Authorization: `Bearer ${token}` } });
 
+
 export default API;
 

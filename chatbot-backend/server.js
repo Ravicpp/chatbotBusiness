@@ -5,7 +5,6 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 
 dotenv.config();
-
 const connectDB = require('./config/db');
 
 // Routers
@@ -21,41 +20,30 @@ const app = express();
 
 // ----- CORS configuration -----
 const allowedFrontends = [
-  process.env.FRONTEND_URL,     // e.g. https://chatbot-business-eta.vercel.app
+  process.env.FRONTEND_URL,        // must match Vercel frontend URL
   'http://localhost:5173',
   'http://localhost:3000'
 ].filter(Boolean);
 
-const corsOptions = {
+app.use(cors({
   origin: (origin, callback) => {
-    // allow tools like Postman (no origin)
-    if (!origin) return callback(null, true);
-
-    if (allowedFrontends.includes(origin)) {
-      return callback(null, true);
-    }
-
+    if (!origin) return callback(null, true); // Postman / server-side
+    if (allowedFrontends.includes(origin)) return callback(null, true);
     return callback(new Error('CORS policy: This origin is not allowed'), false);
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With']
-};
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type','Authorization','Accept','X-Requested-With']
+}));
 
-// apply CORS middleware globally
-app.use(cors(corsOptions));
-// NOTE: removed app.options('*', ...) because some router/path-to-regexp versions
-// throw "Missing parameter name at index 1: *" for '*' path.
-// cors middleware handles preflight automatically when used globally.
-// -------------------------------
-
+// Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // serve uploads (static files)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Health check (useful for external testing)
+// Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 // API routes
@@ -70,11 +58,11 @@ app.get('/', (req, res) => res.send('🚀 Ranjan Medicine Chatbot Backend'));
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('ERROR:', err && err.message ? err.message : err);
-  if (err && err.message && err.message.startsWith('CORS policy')) {
+  console.error('ERROR:', err?.message || err);
+  if (err?.message?.startsWith('CORS policy')) {
     return res.status(403).json({ error: 'CORS blocked: ' + err.message });
   }
-  res.status(500).json({ error: 'Server error', message: err.message || err });
+  res.status(500).json({ error: 'Server error', message: err?.message || err });
 });
 
 const PORT = process.env.PORT || 5000;

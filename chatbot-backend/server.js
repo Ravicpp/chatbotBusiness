@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
@@ -20,14 +19,14 @@ const app = express();
 
 // ----- CORS configuration -----
 const allowedFrontends = [
-  process.env.FRONTEND_URL,        // must match Vercel frontend URL
-  'http://localhost:5173',
-  'http://localhost:3000'
+  process.env.FRONTEND_URL,       // Vercel frontend URL
+  'http://localhost:5173',        // local dev
+  'http://localhost:3000'         // local dev
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // Postman / server-side
+    if (!origin) return callback(null, true); // Postman / server-side requests
     if (allowedFrontends.includes(origin)) return callback(null, true);
     return callback(new Error('CORS policy: This origin is not allowed'), false);
   },

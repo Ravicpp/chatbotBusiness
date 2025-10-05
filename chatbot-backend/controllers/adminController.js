@@ -168,15 +168,14 @@ const updateOrderStatus = async (req, res) => {
       return res.status(500).json({ message: 'Error saving order status update' });
     }
 
-    // Send notification email in background (non-blocking)
+    // Send notification email (attempt and log failures)
     if (user.email) {
-      (async () => {
-        try {
-          const meds = medsSummaryFromOrder(ord);
-          let subject, text;
-          if (ord.type === 'medicine') {
-            subject = `Medicine Order Status Update - ${ord.status}`;
-            text = `
+      try {
+        const meds = medsSummaryFromOrder(ord);
+        let subject, text;
+        if (ord.type === 'medicine') {
+          subject = `Medicine Order Status Update - ${ord.status}`;
+          text = `
 Hi ${user.name},
 
 Your medicine order status has been updated to: ${ord.status}
@@ -189,10 +188,10 @@ Order Details:
 Thank you for choosing Ranjan Medicine!
 
 - Team Ranjan Medicine
-            `;
-          } else {
-            subject = `Appointment Status Update - ${ord.status}`;
-            text = `
+          `;
+        } else {
+          subject = `Appointment Status Update - ${ord.status}`;
+          text = `
 Hi ${user.name},
 
 Your appointment status has been updated to: ${ord.status}
@@ -205,13 +204,13 @@ Appointment Details:
 Thank you for choosing Ranjan Medicine!
 
 - Team Ranjan Medicine
-            `;
-          }
-          await sendMail({ to: user.email, subject, text });
-        } catch (mailErr) {
-          console.error('Status update email failed:', mailErr && mailErr.message);
+          `;
         }
-      })();
+        await sendMail({ to: user.email, subject, text });
+        console.log('Status update email sent to user');
+      } catch (mailErr) {
+        console.error('Status update email failed:', mailErr && mailErr.message);
+      }
     }
 
     const updatedOrder = user.orders.id(orderId);
@@ -323,18 +322,23 @@ const adminEditOrder = async (req, res) => {
 
     // optional notify
     if (user.email) {
-      const meds = medsSummaryFromOrder(ord);
-      const subject = ord.type === 'medicine' ? 'Your order was edited by admin' : 'Your appointment was edited by admin';
-      let text = `Hello ${user.name},\n\nAn admin has updated your ${ord.type === 'medicine' ? 'order' : 'appointment'} (ID: ${orderId}).\n\nUpdated details:\n`;
+      try {
+        const meds = medsSummaryFromOrder(ord);
+        const subject = ord.type === 'medicine' ? 'Your order was edited by admin' : 'Your appointment was edited by admin';
+        let text = `Hello ${user.name},\n\nAn admin has updated your ${ord.type === 'medicine' ? 'order' : 'appointment'} (ID: ${orderId}).\n\nUpdated details:\n`;
 
-      if (ord.type === 'medicine') {
-        text += `- Medicine: ${meds.medicineName}\n- Quantity: ${meds.quantity}\n- Address: ${ord.address || 'N/A'}\n`;
-      } else {
-        text += `- Doctor: ${ord.doctorName || 'N/A'}\n- Date: ${ord.date || 'N/A'}\n- Time: ${ord.time || 'N/A'}\n`;
+        if (ord.type === 'medicine') {
+          text += `- Medicine: ${meds.medicineName}\n- Quantity: ${meds.quantity}\n- Address: ${ord.address || 'N/A'}\n`;
+        } else {
+          text += `- Doctor: ${ord.doctorName || 'N/A'}\n- Date: ${ord.date || 'N/A'}\n- Time: ${ord.time || 'N/A'}\n`;
+        }
+        text += `\nIf you have questions, please contact us.\n\n- Team Ranjan Medicine`;
+
+        await sendMail({ to: user.email, subject, text });
+        console.log('Admin edit notification sent to user');
+      } catch (e) {
+        console.error('Admin edit email failed:', e && e.message);
       }
-      text += `\nIf you have questions, please contact us.\n\n- Team Ranjan Medicine`;
-
-      sendMail({ to: user.email, subject, text }).catch(e => console.error('Admin edit email failed:', e && e.message));
     }
 
     res.json({ message: '✅ Order edited by admin', order: ord });
@@ -363,10 +367,15 @@ const hardDeleteOrder = async (req, res) => {
     await user.save();
 
     if (user.email) {
-      const meds = medsSummaryFromOrder(ord);
-      const subject = ord.type === 'medicine' ? 'Your order was permanently deleted by admin' : 'Your appointment was permanently deleted by admin';
-      const text = `Hello ${user.name},\n\nAn admin has permanently deleted your ${ord.type === 'medicine' ? 'order' : 'appointment'} (ID: ${orderId}).\nIf you believe this was a mistake, contact us.\n\n- Team Ranjan Medicine`;
-      sendMail({ to: user.email, subject, text }).catch(e => console.error('Hard delete email failed:', e && e.message));
+      try {
+        const meds = medsSummaryFromOrder(ord);
+        const subject = ord.type === 'medicine' ? 'Your order was permanently deleted by admin' : 'Your appointment was permanently deleted by admin';
+        const text = `Hello ${user.name},\n\nAn admin has permanently deleted your ${ord.type === 'medicine' ? 'order' : 'appointment'} (ID: ${orderId}).\nIf you believe this was a mistake, contact us.\n\n- Team Ranjan Medicine`;
+        await sendMail({ to: user.email, subject, text });
+        console.log('Hard delete notification sent to user');
+      } catch (e) {
+        console.error('Hard delete email failed:', e && e.message);
+      }
     }
 
     res.json({ message: '✅ Order permanently deleted' });
@@ -412,11 +421,16 @@ const restoreOrder = async (req, res) => {
     await user.save();
 
     if (user.email) {
-      sendMail({
-        to: user.email,
-        subject: 'Your order has been restored',
-        text: `Hello ${user.name},\n\nAn admin has restored your order (ID: ${orderId}). It is now set to pending. If you did not request this, contact us.\n\n- Team Ranjan Medicine`
-      }).catch(e => console.error('Restore email failed:', e && e.message));
+      try {
+        await sendMail({
+          to: user.email,
+          subject: 'Your order has been restored',
+          text: `Hello ${user.name},\n\nAn admin has restored your order (ID: ${orderId}). It is now set to pending. If you did not request this, contact us.\n\n- Team Ranjan Medicine`
+        });
+        console.log('Restore notification sent to user');
+      } catch (e) {
+        console.error('Restore email failed:', e && e.message);
+      }
     }
 
     res.json({ message: '✅ Order restored', order: ord });

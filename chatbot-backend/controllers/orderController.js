@@ -58,7 +58,8 @@ const createOrder = async (req, res) => {
       paymentMethod: payment,
       notes: notes ? String(notes).trim() : '',
       status: 'pending',
-      createdAt: new Date()
+      createdAt: new Date(),
+      history: order?.history || [] // ensure history exists if schema expects it
     };
 
     // Push and save
@@ -68,8 +69,9 @@ const createOrder = async (req, res) => {
     // Get the saved order (last element)
     const savedOrder = user.orders[user.orders.length - 1];
 
-    // send admin email (non-blocking)
-    const adminText = `📦 New Medicine Order
+    // send admin email (await + try/catch so it is attempted but won't break order creation)
+    try {
+      const adminText = `📦 New Medicine Order
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 💊 Medicines:
@@ -79,15 +81,20 @@ ${(savedOrder.medicines || []).map(m => `   • ${m.name} - ${m.quantity}`).join
 💳 Payment: ${savedOrder.paymentMethod}
 📝 Notes: ${savedOrder.notes || 'None'}
 `;
-    sendMail({
-      to: process.env.ADMIN_EMAIL,
-      subject: `📦 New Medicine Order - ${user.name}`,
-      text: adminText
-    }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({
+        to: process.env.ADMIN_EMAIL,
+        subject: `📦 New Medicine Order - ${user.name}`,
+        text: adminText
+      });
+      console.log('Admin order notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
-    // send user email if available (non-blocking)
+    // send user email if available (await + try/catch)
     if (user.email) {
-      const medicinesTable = `
+      try {
+        const medicinesTable = `
 <table border="1" style="border-collapse: collapse; width: 100%; max-width: 400px;">
   <tr style="background-color: #f2f2f2;">
     <th style="padding: 8px; text-align: left;">Medicine</th>
@@ -95,13 +102,13 @@ ${(savedOrder.medicines || []).map(m => `   • ${m.name} - ${m.quantity}`).join
   </tr>
   ${(savedOrder.medicines || []).map(m => `<tr><td style="padding: 8px;">${m.name}</td><td style="padding: 8px;">${m.quantity}</td></tr>`).join('')}
 </table>
-      `;
-      const framedMessage = `
+        `;
+        const framedMessage = `
 <div style="border: 2px solid #007bff; padding: 10px; margin: 10px 0; background-color: #e7f3ff; border-radius: 5px;">
   <p style="margin: 0; font-weight: bold;">Trust my medicine and so the timeline it can be delivered in 30 min okay and waiting for confirmation.</p>
 </div>
-      `;
-      const emailHtml = `
+        `;
+        const emailHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -122,8 +129,8 @@ ${(savedOrder.medicines || []).map(m => `   • ${m.name} - ${m.quantity}`).join
   <p>- Ranjan Medicine Team</p>
 </body>
 </html>
-      `;
-      const emailText = `
+        `;
+        const emailText = `
 Hi ${user.name},
 
 ✅ Your medicine order has been received at Ranjan Medicine!
@@ -141,13 +148,17 @@ Thank you for trusting Ranjan Medicine. We ensure timely delivery and genuine pr
 Stay healthy! 🌿
 
 - Ranjan Medicine Team
-      `;
-      sendMail({
-        to: user.email,
-        subject: 'Your Medicine Order is Received ✅',
-        text: emailText,
-        html: emailHtml
-      }).catch(err => console.error('User mail failed:', err.message));
+        `;
+        await sendMail({
+          to: user.email,
+          subject: 'Your Medicine Order is Received ✅',
+          text: emailText,
+          html: emailHtml
+        });
+        console.log('User order confirmation sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     // chatbot reply
@@ -266,17 +277,23 @@ const editOrder = async (req, res) => {
     await user.save();
 
     // Send emails
-    const adminText = `📝 Order Edited
+    try {
+      const adminText = `📝 Order Edited
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Order ID: ${order._id}
 Before: ${JSON.stringify(before, null, 2)}
 After: ${JSON.stringify(order.history[order.history.length - 1].after, null, 2)}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `📝 Order Edited - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `📝 Order Edited - ${user.name}`, text: adminText });
+      console.log('Admin order edited notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     if (user.email) {
-      const userText = `
+      try {
+        const userText = `
 Hi ${user.name},
 
 Your order has been updated.
@@ -286,7 +303,11 @@ Changes: Please check your order details.
 
 - Ranjan Medicine Team
 `;
-      sendMail({ to: user.email, subject: 'Order Updated', text: userText }).catch(err => console.error('User mail failed:', err.message));
+        await sendMail({ to: user.email, subject: 'Order Updated', text: userText });
+        console.log('User order update mail sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     return res.status(200).json({ message: '✅ Order updated successfully.', order });
@@ -335,15 +356,21 @@ const cancelOrder = async (req, res) => {
     await user.save();
 
     // Send emails
-    const adminText = `❌ Order Cancelled
+    try {
+      const adminText = `❌ Order Cancelled
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Order ID: ${order._id}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `❌ Order Cancelled - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `❌ Order Cancelled - ${user.name}`, text: adminText });
+      console.log('Admin order cancelled notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     if (user.email) {
-      const userText = `
+      try {
+        const userText = `
 Hi ${user.name},
 
 Your order has been cancelled.
@@ -352,7 +379,11 @@ Order ID: ${order._id}
 
 - Ranjan Medicine Team
 `;
-      sendMail({ to: user.email, subject: 'Order Cancelled', text: userText }).catch(err => console.error('User mail failed:', err.message));
+        await sendMail({ to: user.email, subject: 'Order Cancelled', text: userText });
+        console.log('User order cancelled mail sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     return res.status(200).json({ message: '✅ Order cancelled successfully.', order });
@@ -387,13 +418,18 @@ const hardDeleteOrder = async (req, res) => {
     await user.save();
 
     // Send admin email
-    const adminText = `🗑️ Order Hard Deleted
+    try {
+      const adminText = `🗑️ Order Hard Deleted
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Order ID: ${id}
 By Admin: ${req.user.name || req.user.email}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `🗑️ Order Hard Deleted - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `🗑️ Order Hard Deleted - ${user.name}`, text: adminText });
+      console.log('Admin order hard delete notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     return res.status(200).json({ message: '✅ Order permanently deleted.' });
   } catch (err) {
@@ -441,15 +477,21 @@ const restoreOrder = async (req, res) => {
     await user.save();
 
     // Send emails
-    const adminText = `🔄 Order Restored
+    try {
+      const adminText = `🔄 Order Restored
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Order ID: ${order._id}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `🔄 Order Restored - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `🔄 Order Restored - ${user.name}`, text: adminText });
+      console.log('Admin order restored notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     if (user.email) {
-      const userText = `
+      try {
+        const userText = `
 Hi ${user.name},
 
 Your cancelled order has been restored.
@@ -458,7 +500,11 @@ Order ID: ${order._id}
 
 - Ranjan Medicine Team
 `;
-      sendMail({ to: user.email, subject: 'Order Restored', text: userText }).catch(err => console.error('User mail failed:', err.message));
+        await sendMail({ to: user.email, subject: 'Order Restored', text: userText });
+        console.log('User order restored mail sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     return res.status(200).json({ message: '✅ Order restored successfully.', order });

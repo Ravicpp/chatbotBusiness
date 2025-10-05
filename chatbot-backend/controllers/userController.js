@@ -8,8 +8,6 @@ const createToken = (user) => {
 };
 
 // Register or login user (keeps backward compatibility)
-// - If new user -> create, email admin & user, return token
-// - If existing user -> return welcome back + token (so frontend can use the same endpoint)
 const registerUser = async (req, res) => {
   try {
     const { name, phone, language, email } = req.body;
@@ -74,20 +72,25 @@ const registerUser = async (req, res) => {
     });
     await user.save();
 
-    // ✅ Notify Admin
-    const adminText = `🆕 New User Registered
+    // ✅ Notify Admin (await + try/catch so it is attempted but won't break registration)
+    try {
+      const adminText = `🆕 New User Registered
 👤 Name: ${name}
 📞 Phone: ${phone}
 🌐 Language: ${language || 'not set'}
 📧 Email: ${email || 'not provided'}
 `;
-    sendMail({
-      to: process.env.ADMIN_EMAIL,
-      subject: `🆕 New User Registered - ${name}`,
-      text: adminText
-    }).catch(err => console.error("Admin mail failed:", err.message));
+      await sendMail({
+        to: process.env.ADMIN_EMAIL,
+        subject: `🆕 New User Registered - ${name}`,
+        text: adminText
+      });
+      console.log('Admin notification sent');
+    } catch (err) {
+      console.error("Admin mail failed:", err?.message || err);
+    }
 
-    // ✅ Send Confirmation Email to User
+    // ✅ Send Confirmation Email to User (if email provided)
     if (email) {
       const userMailHTML = `
         <div style="font-family: Arial, sans-serif; line-height:1.6; color:#333;">
@@ -101,11 +104,16 @@ const registerUser = async (req, res) => {
         </div>
       `;
 
-      sendMail({
-        to: email,
-        subject: "✅ Registration Successful - Ranjan Medicine",
-        html: userMailHTML
-      }).catch(err => console.error("User mail failed:", err.message));
+      try {
+        await sendMail({
+          to: email,
+          subject: "✅ Registration Successful - Ranjan Medicine",
+          html: userMailHTML
+        });
+        console.log('User confirmation email sent');
+      } catch (err) {
+        console.error("User mail failed:", err?.message || err);
+      }
     }
 
     // prepare reply

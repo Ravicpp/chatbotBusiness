@@ -26,6 +26,7 @@ const createAppointment = async (req, res) => {
       u.orders.some(o =>
         o.type === 'appointment' &&
         o.doctorName === doctorName &&
+        o.date && o.time &&
         Math.abs(new Date(o.date + 'T' + o.time) - requestedTime) < 60 * 60 * 1000
       )
     );
@@ -46,18 +47,38 @@ const createAppointment = async (req, res) => {
       age,
       gender,
       problem,
-      createdAt: new Date()
+      createdAt: new Date(),
+      status: 'pending',
+      deleted: false,
+      history: []
     };
 
     user.orders.push(appt);
     await user.save();
 
-    // Email notification
-    const adminText = `🩺 New Appointment\nUser: ${user.name}\nPhone: ${user.phone}\nDoctor: ${doctorName}\nDate: ${date} ${time}\nAge: ${age}\nGender: ${gender}\nProblem: ${problem}`;
-    await sendMail({ to: process.env.ADMIN_EMAIL, subject: `New Appointment - ${user.name}`, text: adminText }).catch(()=>{});
+    // Get saved appointment (last pushed)
+    const savedAppt = user.orders[user.orders.length - 1];
 
+    // Email notification to admin
+    try {
+      const adminText = `🩺 New Appointment
+User: ${user.name}
+Phone: ${user.phone}
+Doctor: ${doctorName}
+Date: ${date} ${time}
+Age: ${age}
+Gender: ${gender}
+Problem: ${problem}`;
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `New Appointment - ${user.name}`, text: adminText });
+      console.log('Admin appointment notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
+
+    // Email to user if available
     if (user.email) {
-      const userEmailBody = `
+      try {
+        const userEmailBody = `
 Hi ${user.name}, ✅
 
 Your appointment with 👨‍⚕️ ${doctorName} on 📅 ${date} at ⏰ ${time} is successfully booked.
@@ -70,17 +91,21 @@ Your appointment with 👨‍⚕️ ${doctorName} on 📅 ${date} at ⏰ ${time}
 Thank you for trusting us! 🙏
 
 - Ranjan Medicine
-      `;
-      await sendMail({ to: user.email, subject: 'Appointment Confirmed', text: userEmailBody }).catch(()=>{});
+        `;
+        await sendMail({ to: user.email, subject: 'Appointment Confirmed', text: userEmailBody });
+        console.log('User appointment confirmation sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     const reply = user.language === 'hindi'
       ? `✅ Aapki appointment book ho gayi hai 👨‍⚕️ ${doctorName} ke saath.\n📅 ${date} ⏰ ${time}\n\n1️⃣ Main Menu`
       : `✅ Your appointment is booked with 👨‍⚕️ ${doctorName}.\n📅 ${date} ⏰ ${time}\n\n1️⃣ Main Menu`;
 
-    res.json({ reply, appt });
+    res.json({ reply, appt: savedAppt });
   } catch (err) {
-    console.error(err);
+    console.error('❌ Create appointment error:', err);
     res.status(500).json({ reply: '❌ Error booking appointment.' });
   }
 };
@@ -157,7 +182,7 @@ const editAppointment = async (req, res) => {
     }
 
     // Check overlapping if doctor, date, or time changed
-    if ((doctorName !== undefined || date !== undefined || time !== undefined) && doctorName && date && time) {
+    if ((doctorName !== undefined || date !== undefined || time !== undefined) && (doctorName && date && time)) {
       const allUsersWithAppointments = await User.find({ 'orders.type': 'appointment' });
       const requestedTime = new Date(`${date}T${time}`);
       const overlapping = allUsersWithAppointments.some(u =>
@@ -165,6 +190,7 @@ const editAppointment = async (req, res) => {
           o.type === 'appointment' &&
           o._id.toString() !== id && // exclude current
           o.doctorName === doctorName &&
+          o.date && o.time &&
           Math.abs(new Date(o.date + 'T' + o.time) - requestedTime) < 60 * 60 * 1000
         )
       );
@@ -213,17 +239,23 @@ const editAppointment = async (req, res) => {
     await user.save();
 
     // Send emails
-    const adminText = `📝 Appointment Edited
+    try {
+      const adminText = `📝 Appointment Edited
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Appointment ID: ${appt._id}
 Before: ${JSON.stringify(before, null, 2)}
 After: ${JSON.stringify(appt.history[appt.history.length - 1].after, null, 2)}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `📝 Appointment Edited - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `📝 Appointment Edited - ${user.name}`, text: adminText });
+      console.log('Admin appointment edited notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     if (user.email) {
-      const userText = `
+      try {
+        const userText = `
 Hi ${user.name},
 
 Your appointment has been updated.
@@ -233,7 +265,11 @@ Changes: Please check your appointment details.
 
 - Ranjan Medicine Team
 `;
-      sendMail({ to: user.email, subject: 'Appointment Updated', text: userText }).catch(err => console.error('User mail failed:', err.message));
+        await sendMail({ to: user.email, subject: 'Appointment Updated', text: userText });
+        console.log('User appointment update mail sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     return res.status(200).json({ message: '✅ Appointment updated successfully.', appointment: appt });
@@ -282,15 +318,21 @@ const cancelAppointment = async (req, res) => {
     await user.save();
 
     // Send emails
-    const adminText = `❌ Appointment Cancelled
+    try {
+      const adminText = `❌ Appointment Cancelled
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Appointment ID: ${appt._id}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `❌ Appointment Cancelled - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `❌ Appointment Cancelled - ${user.name}`, text: adminText });
+      console.log('Admin appointment cancelled notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     if (user.email) {
-      const userText = `
+      try {
+        const userText = `
 Hi ${user.name},
 
 Your appointment has been cancelled.
@@ -299,7 +341,11 @@ Appointment ID: ${appt._id}
 
 - Ranjan Medicine Team
 `;
-      sendMail({ to: user.email, subject: 'Appointment Cancelled', text: userText }).catch(err => console.error('User mail failed:', err.message));
+        await sendMail({ to: user.email, subject: 'Appointment Cancelled', text: userText });
+        console.log('User appointment cancelled mail sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     return res.status(200).json({ message: '✅ Appointment cancelled successfully.', appointment: appt });
@@ -331,13 +377,18 @@ const hardDeleteAppointment = async (req, res) => {
     await user.save();
 
     // Send admin email
-    const adminText = `🗑️ Appointment Hard Deleted
+    try {
+      const adminText = `🗑️ Appointment Hard Deleted
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Appointment ID: ${id}
 By Admin: ${req.user.name || req.user.email}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `🗑️ Appointment Hard Deleted - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `🗑️ Appointment Hard Deleted - ${user.name}`, text: adminText });
+      console.log('Admin appointment hard delete notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     return res.status(200).json({ message: '✅ Appointment permanently deleted.' });
   } catch (err) {
@@ -385,15 +436,21 @@ const restoreAppointment = async (req, res) => {
     await user.save();
 
     // Send emails
-    const adminText = `🔄 Appointment Restored
+    try {
+      const adminText = `🔄 Appointment Restored
 👤 User: ${user.name}
 📞 Phone: ${user.phone}
 🆔 Appointment ID: ${appt._id}
 `;
-    sendMail({ to: process.env.ADMIN_EMAIL, subject: `🔄 Appointment Restored - ${user.name}`, text: adminText }).catch(err => console.error('Admin mail failed:', err.message));
+      await sendMail({ to: process.env.ADMIN_EMAIL, subject: `🔄 Appointment Restored - ${user.name}`, text: adminText });
+      console.log('Admin appointment restored notification sent');
+    } catch (err) {
+      console.error('Admin mail failed:', err?.message || err);
+    }
 
     if (user.email) {
-      const userText = `
+      try {
+        const userText = `
 Hi ${user.name},
 
 Your cancelled appointment has been restored.
@@ -402,7 +459,11 @@ Appointment ID: ${appt._id}
 
 - Ranjan Medicine Team
 `;
-      sendMail({ to: user.email, subject: 'Appointment Restored', text: userText }).catch(err => console.error('User mail failed:', err.message));
+        await sendMail({ to: user.email, subject: 'Appointment Restored', text: userText });
+        console.log('User appointment restored mail sent');
+      } catch (err) {
+        console.error('User mail failed:', err?.message || err);
+      }
     }
 
     return res.status(200).json({ message: '✅ Appointment restored successfully.', appointment: appt });
